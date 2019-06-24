@@ -1,4 +1,5 @@
 import { CurrencyCode } from "./currency-exchange.constant";
+import { Currency } from './currency.entity';
 
 export interface ICurrencyRateDto {
   currency: string;
@@ -14,3 +15,5 @@ export interface ICurrencyXmlDto {
   effectiveDate: string;
   rates: ICurrencyRateDto[];
 }
+
+export type ICurrencyKeyValueObject = { [code: string]: Currency };

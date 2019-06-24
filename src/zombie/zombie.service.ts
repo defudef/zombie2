@@ -1,4 +1,4 @@
-import { Injectable, Inject } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Zombie } from './zombie.entity';
 import { Repository, DeleteResult } from "typeorm";
@@ -6,6 +6,7 @@ import { CreateZombieDto, UpdateZombieDto, IZombieWithPrices } from './zombie.in
 import { ZombieItemService } from '../zombie-item/zombie-item.service';
 import { CurrencyExchangeService } from '../currency-exchange/currency-exchange.service';
 import { CurrencyCode } from "../currency-exchange/currency-exchange.constant";
+import { ICurrencyKeyValueObject } from "currency-exchange/currency-exchange.interface";
 
 @Injectable()
 export class ZombieService {
@@ -20,7 +21,17 @@ export class ZombieService {
       .find({
         loadEagerRelations: true,
       })
-      .then(this.transformEntities);
+      .then(data => this.transformEntities(data));
+  }
+
+  public async getOne(id: string): Promise<IZombieWithPrices> {
+    const currencies = await this.currencyExchangeService
+      .findByCodes([CurrencyCode.EUR, CurrencyCode.USD])
+      .then(this.currencyExchangeService.mapToKeyValueObject);
+
+    return this.repository
+      .findOneOrFail(id, { loadEagerRelations: true })
+      .then(data => this.transformEntity(data, currencies));
   }
 
   public async create({ name, items }: CreateZombieDto): Promise<Zombie> {
@@ -61,19 +72,24 @@ export class ZombieService {
       .findByCodes([CurrencyCode.EUR, CurrencyCode.USD])
       .then(this.currencyExchangeService.mapToKeyValueObject);
 
-    return entities.map(entity => {
-      const result: number = entity.items.reduce((previousValue, currentValue) => {
-        return previousValue + currentValue.price
-      }, 0);
+    return entities.map(entity => this.transformEntity(entity, currencies));
+  }
 
-      return {
-        ...entity,
-        prices: {
-          PLN: result,
-          EUR: this.currencyExchangeService.exchange(result, currencies[CurrencyCode.EUR].ask),
-          USD: this.currencyExchangeService.exchange(result, currencies[CurrencyCode.USD].ask),
-        },
-      }
-    });
+  private transformEntity(
+    entity: Zombie,
+    currencies: ICurrencyKeyValueObject
+  ): IZombieWithPrices {
+    const result: number = entity.items.reduce((previousValue, currentValue) => (
+      previousValue + currentValue.price
+    ), 0);
+
+    return {
+      ...entity,
+      prices: {
+        PLN: result,
+        EUR: this.currencyExchangeService.exchange(result, currencies[CurrencyCode.EUR].ask),
+        USD: this.currencyExchangeService.exchange(result, currencies[CurrencyCode.USD].ask),
+      },
+    };
   }
 }

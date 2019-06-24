@@ -1,18 +1,19 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { ConfigService } from 'nestjs-config';
 import axios from 'axios';
-import { ICurrencyXmlDto, ICurrencyRateDto } from './currency-exchange.interface';
+import { ICurrencyXmlDto, ICurrencyRateDto, ICurrencyKeyValueObject } from './currency-exchange.interface';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Currency } from './currency.entity';
 import { Repository } from 'typeorm';
 import { CurrencyCode } from './currency-exchange.constant';
 import { Decimal } from 'decimal.js';
+import { forwardRef } from '@nestjs/common';
 
 @Injectable()
 export class CurrencyExchangeService {
   constructor(
-    private readonly config: ConfigService,
     @InjectRepository(Currency) private readonly repository: Repository<Currency>,
+    private readonly config: ConfigService,
   ) {}
 
   public fetchCurrencies(): Promise<ICurrencyRateDto[]> {
@@ -32,7 +33,7 @@ export class CurrencyExchangeService {
     return this.repository.findByIds(codes);
   }
 
-  public mapToKeyValueObject(currencies: Currency[]): {[code: string]: Currency} {
+  public mapToKeyValueObject(currencies: Currency[]): ICurrencyKeyValueObject {
     const keyValueObject = {};
 
     currencies.forEach(currency => {

@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { EntityNotFoundErrorFilter } from './shared/exception-filters/entity-not-found-error.filter';
 
@@ -19,6 +20,15 @@ import { EntityNotFoundErrorFilter } from './shared/exception-filters/entity-not
       },
     })
   );
+
+  const options = new DocumentBuilder()
+    .setTitle('Zombie 2')
+    .setDescription('Awesome documentation for awesome zombie boys')
+    .setVersion('0.1.0')
+    .build();
+  const document = SwaggerModule.createDocument(app, options);
+
+  SwaggerModule.setup('docs/api', app, document)
 
   await app.listen(Number.parseInt(port));
 
